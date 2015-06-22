@@ -13,7 +13,8 @@
     ],
     "require": {
       "gearbox/activesupport": "dev-master",
-      "gearbox/actionview": "dev-master"
+      "gearbox/actionview": "dev-master",
+      "gearbox/engine": "dev-master"
     },
     "autoload": {
         "files": ["build.php"],
