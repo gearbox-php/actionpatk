@@ -2,6 +2,8 @@
 
 namespace Gearbox\ActionPatk;
 
+use Gearbox\ActiveSupport as AcS;
+
 class Route{
     var $controller = null;
     var $action = null;
@@ -54,11 +56,11 @@ class Route{
 
     function __construct($controller_action, $url, $params){
         $array_controller_action = explode("#", $controller_action);
-        $this->action = "_{$array_controller_action[1]}";
+        $this->action = "{$array_controller_action[1]}";
 
-        $namespaces = implode('\\', array_map('camelize', self::$global_namespaces));
-        if(empty($namespaces)) $this->controller = camelize($array_controller_action[0])."Controller";
-        else $this->controller = $namespaces.'\\'.camelize($array_controller_action[0])."Controller";
+        $namespaces = implode('\\', array_map(['Gearbox\ActiveSupport','camelize'], self::$global_namespaces));
+        if(empty($namespaces)) $this->controller = \Gearbox\ActiveSupport::camelize($array_controller_action[0])."Controller";
+        else $this->controller = $namespaces.'\\'.\Gearbox\ActiveSupport::camelize($array_controller_action[0])."Controller";
 
         $this->url = $url;
         $this->url_check = preg_replace("/(\/)/", "\/", preg_replace("/(:[a-z\_]*)/", "\d*", $url));
@@ -69,6 +71,10 @@ class Route{
             preg_replace('/('.self::$root_path_regex.')\/|('.self::$root_path_regex.')/', '', $url)
           )
         );
+    }
+
+    function getActionPatk(){
+      return $this->controller.'#'.$this->action;
     }
 
     function __toString(){
@@ -133,6 +139,7 @@ class Route{
         self::$request_uri = preg_replace("/\?{$_SERVER['QUERY_STRING']}/", "", $_SERVER['REQUEST_URI']);
         self::$request_uri = preg_replace("/\/$/", "", self::$request_uri);
         self::getFormat();
+
         if(self::$request_uri == self::$root_path){
           self::$current_route = clone self::$routers['root'];
           return self::$current_route->readValuesParams()->setFormat(self::$current_format);
@@ -163,7 +170,7 @@ class Route{
     }
 
     static public function setRoutes(){
-        self::$global_path = preg_replace("/\/app.php/", "",$_SERVER['SCRIPT_NAME']);
+        self::$global_path = preg_replace("/\/index.php/", "",$_SERVER['SCRIPT_NAME']);
         self::$root_path = self::$global_path;
         self::$root_path_regex = preg_replace("/(\/)/", "\/", self::$root_path);
         include \GearBox\Engine::baseDir()."/config/routes.php";
@@ -263,7 +270,7 @@ class Route{
         $temp_path = self::$global_path;
         $temp_namespaces = self::$global_namespaces;
 
-        self::$global_namespaces[] = camelize($namespace);
+        self::$global_namespaces[] = \Gearbox\ActiveSupport::camelize($namespace);
         self::$global_path = self::$global_path.'/'.$namespace;
         self::$global_path_match = self::$global_path;
 
@@ -317,5 +324,13 @@ class Route{
         throw new \Exception('Erro ao Gerar a Rota');
       }
       return $route;
+    }
+
+    static function __callStatic($name, $arguments) {
+        if (preg_match("/_url/", $name) || preg_match("/_path/", $name)) {
+            return self::getRouteByMethod($name, $arguments);
+        } else {
+            throw new Exception('Metodo não Encontrado.');
+        }
     }
 }
